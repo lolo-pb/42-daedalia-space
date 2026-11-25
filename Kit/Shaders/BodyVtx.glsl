@@ -42,6 +42,5 @@ void main(void)
                                                                        
       ColorTexCoord = gl_MultiTexCoord0.st;                            
       ShadowCoord = ShadowMatrix*gl_Vertex;                            
-      ShadowCoord = ShadowCoord/ShadowCoord.w;                         
                                                                        
 }                                                                      

@@ -132,65 +132,17 @@ vec3 NoiseBump(vec3 Pos)
          V3.r+0.5*V3.g-0.75)));                                        
 }                                                                      
 /*********************************************************************/
-float OneSampleShadowLookup(void)                                      
-{                                                                      
-      float InLight = 0.0;                                             
-      if (ShadowCoord.x <= 0.001) InLight = 1.0;                       
-      if (ShadowCoord.x >= 0.999) InLight = 1.0;                       
-      if (ShadowCoord.y <= 0.001) InLight = 1.0;                       
-      if (ShadowCoord.y >= 0.999) InLight = 1.0;                       
-      if(shadow2DProj(ShadowMap,ShadowCoord).x == 1.0) InLight = 1.0;  
-      return(InLight);                                                 
-}                                                                      
-/*********************************************************************/
-float FourSampleShadowLookup(void)                                     
-{                                                                      
-      float depth;                                                     
-                                                                       
-      depth = shadow2DProj(ShadowMap,                                  
-         ShadowCoord+vec4(0.75,0.75,0.0,0.0)*2.0/2048.0).x;            
-      float InLight1 = (depth != 1.0 ? 0.0 : 0.25);                    
-                                                                       
-      depth = shadow2DProj(ShadowMap,                                  
-         ShadowCoord+vec4(-0.75,0.75,0.0,0.0)*2.0/2048.0).x;           
-      float InLight2 = (depth != 1.0 ? 0.0 : 0.25);                    
-                                                                       
-      depth = shadow2DProj(ShadowMap,                                  
-         ShadowCoord+vec4(0.75,-0.75,0.0,0.0)*2.0/2048.0).x;           
-      float InLight3 = (depth != 1.0 ? 0.0 : 0.25);                    
-                                                                       
-      depth = shadow2DProj(ShadowMap,                                  
-         ShadowCoord+vec4(-0.75,-0.75,0.0,0.0)*2.0/2048.0).x;          
-      float InLight4 = (depth != 1.0 ? 0.0 : 0.25);                    
-                                                                       
-      return(InLight1+InLight2+InLight3+InLight4);                     
-}                                                                      
-/*********************************************************************/
-float FiveSampleShadowLookup(void)                                     
-{                                                                      
-      float depth;                                                     
-                                                                       
-      depth = shadow2DProj(ShadowMap,ShadowCoord).x;                   
-      float InLight1 = (depth != 1.0 ? 0.0 : 0.2);                     
-                                                                       
-      depth = shadow2DProj(ShadowMap,                                  
-         ShadowCoord+vec4(0.5,0.5,0.0,0.0)/2048.0).x;                  
-      float InLight2 = (depth != 1.0 ? 0.0 : 0.2);                     
-                                                                       
-      depth = shadow2DProj(ShadowMap,                                  
-         ShadowCoord+vec4(-0.5,0.5,0.0,0.0)/2048.0).x;                 
-      float InLight3 = (depth != 1.0 ? 0.0 : 0.2);                     
-                                                                       
-      depth = shadow2DProj(ShadowMap,                                  
-         ShadowCoord+vec4(-0.5,0.5,0.0,0.0)/2048.0).x;                 
-      float InLight4 = (depth != 1.0 ? 0.0 : 0.2);                     
-                                                                       
-      depth = shadow2DProj(ShadowMap,                                  
-         ShadowCoord+vec4(-0.5,-0.5,0.0,0.0)/2048.0).x;                
-      float InLight5 = (depth != 1.0 ? 0.0 : 0.2);                     
-                                                                       
-      return(InLight1+InLight2+InLight3+InLight4+InLight5);            
-}                                                                      
+float ShadowVisibility(void)
+{
+      if (ShadowCoord.w <= 0.0) return 1.0;
+
+      vec3 coord = ShadowCoord.xyz / ShadowCoord.w;
+      if (any(lessThanEqual(coord,vec3(0.0))) ||
+          any(greaterThanEqual(coord,vec3(1.0)))) return 1.0;
+
+      // Keep the fractional visibility returned by the filtered depth comparison.
+      return shadow2D(ShadowMap,coord).r;
+}
 /*********************************************************************/
 void main(void)                                                        
 {                                                                      
@@ -201,13 +153,12 @@ void main(void)
       float SpecIllum = 0.0;                                           
       float NoL,EoR;                                                   
                                                                        
-      vec3 NormE = NormalVecE;                                         
+      vec3 NormE = normalize(NormalVecE);
                                                                        
       if (NoiseBumpEnabled)                                            
          NormE = normalize(NoiseBump(PosVecB));                        
                                                                        
-      vec3 EyeReflectVecN = normalize(reflect(-EyeVecN,NormalVecN));   
-      vec3 LightReflectVecE = normalize(reflect(-LightVecE,NormE));    
+      vec3 EyeReflectVecN = reflect(-normalize(EyeVecN),normalize(NormalVecN));
                                                                        
       if (ColorTexEnabled)                                             
          TexColor = texture2D(ColorTexture,ColorTexCoord);             
@@ -223,16 +174,17 @@ void main(void)
          TexColor = NoiseCol(PosVecB);                                 
                                                                        
       if (ShadowsEnabled) {                                            
-         InLight = OneSampleShadowLookup();                            
+         InLight = ShadowVisibility();
       }                                                                
                                                                        
       NoL = dot(NormE,LightVecE);                                      
       if (InLight > 0.0 && NoL > 0.0) {                                
          /* Diffuse Illumination */                                    
-         DiffIllum = clamp(NoL,0.0,1.0);                               
+         DiffIllum = InLight*clamp(NoL,0.0,1.0);
          /* Specular Illumination */                                   
-         EoR = clamp(dot(EyeVecE,LightReflectVecE),0.0,1.0);           
-         SpecIllum = pow(EoR,gl_FrontMaterial.shininess);              
+         vec3 LightReflectVecE = reflect(-LightVecE,NormE);
+         EoR = clamp(dot(normalize(EyeVecE),LightReflectVecE),0.0,1.0);
+         SpecIllum = InLight*pow(EoR,gl_FrontMaterial.shininess);
       }                                                                
                                                                        
       if (ReflectEnabled) {                                            
