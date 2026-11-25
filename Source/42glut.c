@@ -48,6 +48,21 @@ void TimerHandler(int value)
       TimerHasExpired = 1;
 }
 /*********************************************************************/
+static unsigned int LastCamDrawMs;
+
+static void DrawCamWindow(long AdvancePanZoom)
+{
+      LastCamDrawMs = (unsigned int) glutGet(GLUT_ELAPSED_TIME);
+      glutSetWindow(CamWindow);
+      CamRenderExec(AdvancePanZoom);
+      glutSwapBuffers();
+}
+
+static void CamDisplay(void)
+{
+      DrawCamWindow(FALSE);
+}
+/*********************************************************************/
 void Idle(void)
 {
       long MaxCamFrame = 20000;
@@ -58,9 +73,7 @@ void Idle(void)
       struct CameraType *C;
       
       if (PauseFlag) {
-         glutSetWindow(CamWindow);
-         CamRenderExec();
-         glutSwapBuffers();
+         DrawCamWindow(FALSE);
          if (MapWindowExists) {
             glutSetWindow(MapWindow);
             DrawMap();
@@ -76,8 +89,6 @@ void Idle(void)
             DrawUnitSphere();
             glutSwapBuffers();
          }
-
-         glutPostRedisplay();
       }
       else {
          Eye.w[0] = 0.0;
@@ -88,9 +99,7 @@ void Idle(void)
             glutTimerFunc(TimerDuration,TimerHandler,0);
             Done = SimStep();
             if (GLOutFlag) {
-               glutSetWindow(CamWindow);
-               CamRenderExec();
-               glutSwapBuffers();
+               DrawCamWindow(TRUE);
                if (MapWindowExists) {
                   glutSetWindow(MapWindow);
                   DrawMap();
@@ -120,7 +129,6 @@ void Idle(void)
                   }
                }
 
-               glutPostRedisplay();
                if (CaptureCam) {
                   CamFrame++;
                   sprintf(CamFileName,"CamFrame%05ld.ppm",CamFrame);
@@ -130,6 +138,11 @@ void Idle(void)
                   printf("Captured Cam Frame %ld\n",CamFrame);
                   if (CamFrame > MaxCamFrame) CamFrame = 0;
                }
+            }
+            else if (TimeMode == REAL_TIME &&
+                     (unsigned int) glutGet(GLUT_ELAPSED_TIME)-LastCamDrawMs >= 100U) {
+               /* Refresh the viewer at up to 10 Hz between scheduled frames. */
+               DrawCamWindow(FALSE);
             }
          }
       }
@@ -991,7 +1004,7 @@ void InitCamWindow(void)
       glEnable(GL_NORMALIZE);
 
 /* .. Set Callback Functions */
-      glutDisplayFunc(CamRenderExec);
+      glutDisplayFunc(CamDisplay);
       glutIdleFunc(Idle);
       glutMouseFunc(CamMouseButtonHandler);
       glutMotionFunc(CamMouseActiveMotionHandler);
