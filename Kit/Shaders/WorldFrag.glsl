@@ -20,6 +20,7 @@ uniform samplerCube MapTexture;
 uniform samplerCube BumpTexture;                                       
 uniform samplerCube CloudGlossTexture;                                 
 uniform sampler1D RingTexture;                                         
+uniform int OpticalDepthSamples; // Zero preserves the original integration.
 uniform bool HasAtmo;
 uniform bool HasRing;  
 uniform vec3 GasColor;
@@ -58,6 +59,7 @@ vec3 ProjectRayOntoSphere(vec3 Pos, vec3 Axis, float Rad)
       }
 }
 /**********************************************************************/
+#if 0 // Original optical depth integration, kept for reference.
 vec4 OpticalDepth(vec3 StartPt, vec3 EndPt, vec3 SunVec, float Rg)
 {
       float du,dL;
@@ -119,6 +121,77 @@ vec4 OpticalDepth(vec3 StartPt, vec3 EndPt, vec3 SunVec, float Rg)
       
       return(OD);
 }
+#endif
+
+/* Made aternative with smaller sampling to encrese performance */
+vec4 OpticalDepth(vec3 StartPt, vec3 EndPt, vec3 SunVec, float Rg)
+{
+      float du,dL,interiorEnd;
+      float h,u;
+      float DayODr = 0.0;
+      float EclODr = 0.0;
+      float DayODm = 0.0;
+      float EclODm = 0.0;
+      float PoS;
+      vec3 Pt;
+      vec4 OD;
+
+      if (OpticalDepthSamples > 0) {
+         du = 1.0/float(OpticalDepthSamples);
+         interiorEnd = 1.0;
+      }
+      else {
+         du = 0.001;
+         interiorEnd = 1.0-du;
+      }
+      dL = du*length(EndPt-StartPt);
+
+      /* Trapezoid Integration */
+      h = length(StartPt)-Rg;
+      PoS = dot(StartPt,SunVec);
+      if (PoS > 0.0 || length(StartPt-PoS*SunVec) > Rg) {
+         /* Daylit */
+         DayODr += 0.5*exp(-h/Hr);
+         DayODm += 0.5*exp(-h/Hm);
+      }
+      else {
+         /* Eclipsed */
+         EclODr += 0.5*exp(-h/Hr);
+         EclODm += 0.5*exp(-h/Hm);
+      }
+
+      for(u=du;u<interiorEnd;u+=du) {
+         Pt = (1.0-u)*StartPt + u*EndPt;
+         h = length(Pt)-Rg;
+         PoS = dot(Pt,SunVec);
+         if (PoS > 0.0 || length(Pt-PoS*SunVec) > Rg) {
+            /* Daylit */
+            DayODr += exp(-h/Hr);
+            DayODm += exp(-h/Hm);
+         }
+         else {
+            /* Eclipsed */
+            EclODr += exp(-h/Hr);
+            EclODm += exp(-h/Hm);
+         }
+      }
+
+      h = length(EndPt)-Rg;
+      PoS = dot(EndPt,SunVec);
+      if (PoS > 0.0 || length(EndPt-PoS*SunVec) > Rg) {
+         /* Daylit */
+         DayODr += 0.5*exp(-h/Hr);
+         DayODm += 0.5*exp(-h/Hm);
+      }
+      else {
+         /* Eclipsed */
+         EclODr += 0.5*exp(-h/Hr);
+         EclODm += 0.5*exp(-h/Hm);
+      }
+      OD = vec4(DayODr,EclODr,DayODm,EclODm)*dL;
+
+      return(OD);
+}
 /**********************************************************************/
 vec4 SkyColor(float EoW, vec3 ViewVecW, vec3 SunVecW)
 {     
@@ -145,7 +218,9 @@ vec4 SkyColor(float EoW, vec3 ViewVecW, vec3 SunVecW)
             SunVecW,WorldRad);
       }
       TotOD = OD[0]+OD[1];
-      SkyCol.rgb = (OD[0]+0.1*OD[1])/TotOD*GasColor;
+      SkyCol.rgb = vec3(0.0);
+      if (OpticalDepthSamples == 0 || TotOD > 0.0)
+         SkyCol.rgb = (OD[0]+0.1*OD[1])/TotOD*GasColor;
 
       SkyCol.rgb += 0.5*(1.0-exp(-Br*OD[0]));
       SkyCol.a = 1.0-exp(-2.0*(OD[0]+0.1*OD[1])/Hr);
@@ -153,7 +228,7 @@ vec4 SkyColor(float EoW, vec3 ViewVecW, vec3 SunVecW)
       /* Add Sun */
       SunCol = exp(-0.5*Br*TotOD);
       m = max(SunCol[0],max(SunCol[1],SunCol[2]));
-      SunCol /= m;
+      if (OpticalDepthSamples == 0 || m > 0.0) SunCol /= m;
       VoS = dot(ViewVecW,SunVecW);
       if (VoS > CosSunAng) {
          SkyCol = vec4(SunCol,1.0);
@@ -191,7 +266,7 @@ vec4 GroundColor(vec3 ViewVecW, vec3 SunVecW)
       float EoV = dot(PosEyeW,ViewVecW);
       float E2 = dot(PosEyeW,PosEyeW);
       float Disc = EoV*EoV-E2+WorldRad*WorldRad;
-      float Dist = -EoV-sqrt(Disc);
+      float Dist = -EoV-sqrt(OpticalDepthSamples > 0 ? max(Disc,0.0) : Disc);
       GndPosW = PosEyeW+Dist*ViewVecW;
       UnitGndPosW = normalize(GndPosW);
 
@@ -233,7 +308,7 @@ vec4 GroundColor(vec3 ViewVecW, vec3 SunVecW)
       if (HasAtmo) {
          if (MagPosEye > AtmoRad) {
             Disc = EoV*EoV-E2+AtmoRad*AtmoRad;
-            Dist = -EoV-sqrt(Disc);
+            Dist = -EoV-sqrt(OpticalDepthSamples > 0 ? max(Disc,0.0) : Disc);
             OD = OpticalDepth(PosEyeW+Dist*ViewVecW,GndPosW,
                SunVecW,WorldRad);
          }
@@ -241,7 +316,8 @@ vec4 GroundColor(vec3 ViewVecW, vec3 SunVecW)
             OD = OpticalDepth(PosEyeW,GndPosW,SunVecW,WorldRad);
          }
          TotOD = OD[0]+OD[1];
-         AirCol.rgb = (OD[0]+0.1*OD[1])/TotOD*GasColor;
+         if (OpticalDepthSamples == 0 || TotOD > 0.0)
+            AirCol.rgb = (OD[0]+0.1*OD[1])/TotOD*GasColor;
          AirCol.rgb *= 1.0-exp(-(OD[0]+0.1*OD[1])/Hr);
          GndColor.rgb += 0.25*AirCol.rgb;
       }
