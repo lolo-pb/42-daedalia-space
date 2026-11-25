@@ -6,6 +6,12 @@ The [Makefile](Makefile) enables AddressSanitizer by default. Build with `make -
 
 The instrumented build got past a GUI startup crash observed under WSLg. The cause is still unknown. To skip leak reports at exit while keeping memory access checks, run `ASAN_OPTIONS=detect_leaks=0 ./42`.
 
+## Camera controlls
+
+- Click and drag on the scene outside the menus to swing around the satellite. This works in the default Track Host mode.
+- Use the range + and − buttons in the Host panel to move farther away or closer.
+- Press Left or Right Arrow to narrow or widen the field of view
+
 ## Entry points
 
 | To find | Start here |

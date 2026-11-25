@@ -82,6 +82,9 @@ void DrawWorldAsBackdrop(struct WorldType *W,double PosN[3],double svn[3],
       
       glUseProgram(WorldShaderProgram);
 
+      UniLoc = glGetUniformLocation(WorldShaderProgram,"OpticalDepthSamples");
+      glUniform1i(UniLoc,POV == &Eye ? 64 : 0);
+
       UniLoc = glGetUniformLocation(WorldShaderProgram,"HasAtmo");
       glUniform1i(UniLoc,A->Exists);
 
@@ -851,14 +854,16 @@ void DrawCamHUD(struct POVType *POV)
       char Mode[3][20] = {"TRACK HOST","TRACK TARGET","FIXED IN HOST"};
       char WorldName[84];
       double RA,Dec;
-      GLfloat BoxColor[4] = {0.133,0.545,0.133,1.0};
-      GLfloat ClockColor[4] = {0.604,0.804,0.196,1.0};
+      GLfloat White[4] = {1.0,1.0,1.0,1.0};
       GLfloat ProxOpsGridColor[4] = {1.0,1.0,1.0,0.5};
       GLfloat Black[4] = {0.0,0.0,0.0,1.0};
       int i;
       struct WidgetType *W;
       struct OrbitType *O;
 
+      glPushAttrib(GL_ENABLE_BIT | GL_CURRENT_BIT | GL_LINE_BIT);
+      glDisable(GL_DEPTH_TEST);
+      glLineWidth(1.0);
       glMatrixMode(GL_PROJECTION);
       glPushMatrix();
       glLoadIdentity();
@@ -873,7 +878,7 @@ void DrawCamHUD(struct POVType *POV)
       glDisable(GL_LIGHTING);
 
 /* .. Clock Box */
-      glColor4fv(BoxColor);
+      glColor4fv(White);
       glBegin(GL_LINE_LOOP);
       glVertex2i(2,2);
       glVertex2i(172,2);
@@ -881,7 +886,6 @@ void DrawCamHUD(struct POVType *POV)
       glVertex2i(2,60);
       glEnd();
 
-      glColor4fv(ClockColor);
       sprintf(s,"Sim Time = % 8.2f",SimTime);
       glRasterPos2i(10,20);
       DrawString(Font8x13[CAM_FONT],s);
@@ -1039,8 +1043,8 @@ void DrawCamHUD(struct POVType *POV)
       DrawString(Font8x13[CAM_FONT],"-");
 
 /* .. Boresight Direction */
+      glColor4fv(White);
       if (CamShow[N_AXES]) {
-         glColor4fv(NBrightColor);
          RA = atan2(-POV->CN[2][1],-POV->CN[2][0])*R2D;
          Dec = asin(-POV->CN[2][2])*R2D;
          sprintf(s,"View RA:% 5.2f Dec:% 5.2f",RA,Dec);
@@ -1048,21 +1052,18 @@ void DrawCamHUD(struct POVType *POV)
          DrawString(Font8x13[CAM_FONT],s);
       }
       if (CamShow[L_AXES]) {
-         glColor4fv(LBrightColor);
          sprintf(s,"View in L: [% 5.4f % 5.4f % 5.4f]",
             -POV->CL[2][0],-POV->CL[2][1],-POV->CL[2][2]);
          glRasterPos2i(POV->PixWidth-300,35);
          DrawString(Font8x13[CAM_FONT],s);
       }
       if (CamShow[F_AXES]) {
-         glColor4fv(FBrightColor);
          sprintf(s,"View in F: [% 5.4f % 5.4f % 5.4f]",
             -POV->CF[2][0],-POV->CF[2][1],-POV->CF[2][2]);
          glRasterPos2i(POV->PixWidth-300,50);
          DrawString(Font8x13[CAM_FONT],s);
       }
       if (CamShow[B_AXES]) {
-         glColor4fv(BBrightColor);
          sprintf(s,"View in B: [% 5.4f % 5.4f % 5.4f]",
             -POV->CB[2][0],-POV->CB[2][1],-POV->CB[2][2]);
          glRasterPos2i(POV->PixWidth-300,65);
@@ -1091,8 +1092,7 @@ void DrawCamHUD(struct POVType *POV)
 
       DrawAlphabet(POV);
 
-      glColor4fv(Black);
-      glEnable(GL_LIGHTING);
+      glPopAttrib();
 
       glMatrixMode(GL_PROJECTION);
       glPopMatrix();
@@ -1349,7 +1349,7 @@ void DrawFarScene(struct POVType *POV)
                   W->NearExtent,W->FarExtent);
                glMatrixMode(GL_MODELVIEW);
                glUseProgram(BodyShaderProgram);
-               glUniform1i(ShadowsEnabledLoc,ShadowsEnabled);
+               glUniform1i(ShadowsEnabledLoc,GL_FALSE);
                glUniformMatrix3fv(CNELoc,1,0,CNE);
                glPushMatrix();
                glTranslated(-rh[Iw][0],-rh[Iw][1],-rh[Iw][2]);
@@ -2063,24 +2063,13 @@ void OpaquePass(struct POVType *POV)
       struct BodyType *B;
       struct RegionType *R;
       struct MeshType *M;
-      struct ShadowFBOType *SM;
       long Ir;
       double PosR[3];
       float Black[4] = {0.0,0.0,0.0,1.0};
 
-      SM = &ShadowMap;
-
       glUseProgram(BodyShaderProgram);
       glUniform1i(ShadowsEnabledLoc,ShadowsEnabled);
       glUniformMatrix3fv(CNELoc,1,0,CNE);
-
-      if (ShadowsEnabled) {
-         glActiveTexture(GL_TEXTURE5);
-         glEnable(GL_TEXTURE_2D);
-         glBindTexture(GL_TEXTURE_2D,SM->TexTag);
-         glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_COMPARE_MODE,
-               GL_COMPARE_R_TO_TEXTURE);
-      }
 
       for(Ir=0;Ir<Nrgn;Ir++) {
          R = &Rgn[Ir];
@@ -2131,22 +2120,11 @@ void SeeThruPass(struct POVType *POV)
       struct BodyType *B;
       struct MeshType *M;
       struct RegionType *R;
-      struct ShadowFBOType *SM;
       double PosR[3];
-
-      SM = &ShadowMap;
 
       glUseProgram(BodyShaderProgram);
       glUniform1i(ShadowsEnabledLoc,ShadowsEnabled);
       glUniformMatrix3fv(CNELoc,1,0,CNE);
-
-      if (ShadowsEnabled) {
-         glActiveTexture(GL_TEXTURE5);
-         glEnable(GL_TEXTURE_2D);
-         glBindTexture(GL_TEXTURE_2D,SM->TexTag);
-         glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_COMPARE_MODE,
-               GL_COMPARE_R_TO_TEXTURE);
-      }
 
       for(Ir=0;Ir<Nrgn;Ir++) {
          R = &Rgn[Ir];
@@ -2171,6 +2149,10 @@ void SeeThruPass(struct POVType *POV)
                M = &Mesh[B->MeshTag];
                glPushMatrix();
                glMultMatrixf(B->ModelMatrix);
+               if (ShadowsEnabled) {
+                  MxM4f(ShadowFromNMatrix,B->ModelMatrix,ShadowMatrix);
+                  glUniformMatrix4fv(ShadowMatrixLoc,1,0,ShadowMatrix);
+               }
                glCallList(M->SeeThruListTag);
                glPopMatrix();
             }
@@ -2199,6 +2181,8 @@ void DrawBodies(struct POVType *POV)
 /* .. Depth Pass */
       if (ShadowsEnabled) {
          DepthPass(POV);
+         glActiveTexture(GL_TEXTURE5);
+         glBindTexture(GL_TEXTURE_2D,ShadowMap.TexTag);
       }
 
 /* .. Opaque Pass */
@@ -2209,6 +2193,11 @@ void DrawBodies(struct POVType *POV)
 
 /* .. Tidy Up */
       glUseProgram(0);
+      if (ShadowsEnabled) {
+         glActiveTexture(GL_TEXTURE5);
+         glBindTexture(GL_TEXTURE_2D,0);
+      }
+      glActiveTexture(GL_TEXTURE0);
       glMaterialfv(GL_FRONT,GL_AMBIENT_AND_DIFFUSE,Black);
       glMaterialfv(GL_FRONT,GL_SPECULAR,Black);
       glMaterialfv(GL_FRONT,GL_EMISSION,Black);
@@ -2687,13 +2676,17 @@ void PanZoomPOV(struct POVType *POV)
 }
 /**********************************************************************/
 /*  Find POV location, orientation in RefOrb, N, H, etc               */
-void UpdatePOV(struct POVType *POV)
+static void UpdatePOVPose(struct POVType *POV)
 {
-      PanZoomPOV(POV);
-
       if (POV->Mode == TRACK_HOST) PovTrackHostMode(POV);
       else if (POV->Mode == TRACK_TARGET) PovTrackTargetMode(POV);
       else PovFixedInHostMode(POV);
+}
+/**********************************************************************/
+void UpdatePOV(struct POVType *POV)
+{
+      PanZoomPOV(POV);
+      UpdatePOVPose(POV);
 }
 /**********************************************************************/
 void FindModelMatrices(struct POVType *POV)
@@ -2739,10 +2732,11 @@ void FindModelMatrices(struct POVType *POV)
       }
 }
 /**********************************************************************/
-void CamRenderExec(void)
+void CamRenderExec(long AdvancePanZoom)
 {
       FindModelMatrices(&Eye);
-      UpdatePOV(&Eye);
+      if (AdvancePanZoom) UpdatePOV(&Eye);
+      else UpdatePOVPose(&Eye);
 
       glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
       DrawFarScene(&Eye);
@@ -4393,11 +4387,10 @@ void DrawUnitSphere(void)
 /**********************************************************************/
 void InitCamWidgets(struct POVType *POV)
 {
-      GLfloat BorderColor[4] = {0.64,0.32,0.075,1.0};
-      GLfloat TextColor[4] = {0.8,0.44,0.0,1.0};
+      GLfloat BorderColor[4] = {1.0,1.0,1.0,1.0};
+      GLfloat TextColor[4] = {1.0,1.0,1.0,1.0};
       GLfloat SelectedColor[4] = {1.0,1.0,1.0,0.5};
       GLfloat UnselectedColor[4] = {1.0,1.0,1.0,0.3};
-      GLfloat CamShowColor[4] = {0.8,0.44,0.0,1.0};
       GLfloat ClearColor[4] = {0.0,0.0,0.0,0.0};
       long x0,y0;
       unsigned int Max;
@@ -4548,8 +4541,8 @@ void InitCamWidgets(struct POVType *POV)
       CamShowWidget.xmax = x0 + 30 + 8*Max;
       CamShowWidget.ymin = y0;
       CamShowWidget.ymax = y0 + 25 + 15*CAM_MENU_SIZE;
-      memcpy(CamShowWidget.BorderColor,CamShowColor,4*sizeof(GLfloat));
-      memcpy(CamShowWidget.TextColor,CamShowColor,4*sizeof(GLfloat));
+      memcpy(CamShowWidget.BorderColor,BorderColor,4*sizeof(GLfloat));
+      memcpy(CamShowWidget.TextColor,TextColor,4*sizeof(GLfloat));
       memcpy(CamShowWidget.SelectedColor,ClearColor,4*sizeof(GLfloat));
       memcpy(CamShowWidget.UnselectedColor,ClearColor,4*sizeof(GLfloat));
       CamShowWidget.Nspot = CAM_MENU_SIZE;
@@ -5187,8 +5180,10 @@ void LoadShadowMapFBO(void)
          GL_DEPTH_COMPONENT,GL_FLOAT,NULL);
       glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_CLAMP);
       glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_CLAMP);
-      glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST);
-      glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);
+      glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
+      glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
+      glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_COMPARE_MODE,
+            GL_COMPARE_R_TO_TEXTURE);
       glBindTexture(GL_TEXTURE_2D,0);
 
       /* Create Render Buffer */
