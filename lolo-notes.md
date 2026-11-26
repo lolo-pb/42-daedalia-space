@@ -12,6 +12,21 @@ The instrumented build got past a GUI startup crash observed under WSLg. The cau
 - Use the range + and − buttons in the Host panel to move farther away or closer.
 - Press Left or Right Arrow to narrow or widen the field of view
 
+## Potential changes
+
+- A nicer web GD dashboard, we can use the sockets or smth view TX/RX example
+
+- We can reorganize this into folders{
+    There’s a third kind of file, Orb_Cube.txt, which describes the orbit. So the relationship is:
+
+    Inp_Sim.txt                 The whole simulation
+    ├── Orb_Cube.txt            The orbit
+    └── SC_Cubesat1U.txt        The spacecraft
+        └── Cubesat_1U.obj      Its 3D shape, in Model/
+
+    Each file has its own expected format; they aren’t interchangeable.
+}
+
 ## Entry points
 
 | To find | Start here |
