@@ -4,6 +4,33 @@
     Notes:
     MTB is magnectic torque bar, aka magnetorquer
 */
+/// PID ///
+typedef struct {
+    double proportional;
+    double integral;
+    double derivative;
+    double minimum_integral ;
+    double maximum_integral;
+    double minimum_output ;
+    double maximum_output;
+    double accumulated_integral;
+}PID;
+
+double PidUpdate(PID *pid, double error, double measured_rate, double timestep) {
+    pid->accumulated_integral = Limit(
+        pid->accumulated_integral + error * timestep,
+        pid->minimum_integral,
+        pid->maximum_integral
+    );
+
+    return Limit(
+        pid->proportional * error
+            + pid->integral * pid->accumulated_integral
+            - pid->derivative * measured_rate,
+        pid->minimum_output,
+        pid->maximum_output);
+}
+/// PID END ///
 
 
 /* Coil order: +X, -X, +Y, -Y, +Z. */
