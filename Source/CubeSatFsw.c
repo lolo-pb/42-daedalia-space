@@ -1,5 +1,10 @@
 #include "42.h"
 #include "CubeSatFsw.h"
+/*
+    Notes:
+    MTB is magnectic torque bar, aka magnetorquer
+*/
+
 
 /* Coil order: +X, -X, +Y, -Y, +Z. */
 void CubeSatMixDipole(struct AcType *AC, const double requestedDipole[3]){
