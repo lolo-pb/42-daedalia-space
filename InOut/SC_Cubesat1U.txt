@@ -69,10 +69,26 @@ FALSE                       ! Wheel Jitter Active
 0                             ! Node
 NONE                          ! Jitter Input File Name
 **************************** MTB Parameters ****************************
-0                                   ! Number of MTBs
+5                             ! Number of MTBs
 ==============================  MTB 0  =================================
-180.0                         ! Saturation (A-m^2)
+0.2                           ! Provisional saturation (A-m^2) TODO
 1.0   0.0   0.0               ! MTB Axis Components, [X, Y, Z]
+0                             ! Node
+==============================  MTB 1  =================================
+0.2                           ! Provisional saturation (A-m^2)  TODO
+-1.0  0.0   0.0               ! MTB Axis Components, [X, Y, Z]
+0                             ! Node
+==============================  MTB 2  =================================
+0.2                           ! Provisional saturation (A-m^2)  TODO
+0.0   1.0   0.0               ! MTB Axis Components, [X, Y, Z]
+0                             ! Node
+==============================  MTB 3  =================================
+0.2                           ! Provisional saturation (A-m^2)  TODO
+0.0  -1.0   0.0               ! MTB Axis Components, [X, Y, Z]
+0                             ! Node
+==============================  MTB 4  =================================
+0.2                           ! Provisional saturation (A-m^2)  TODO
+0.0   0.0   1.0               ! MTB Axis Components, [X, Y, Z]
 0                             ! Node
 ************************* Thruster Parameters **************************
 0                             ! Number of Thrusters
