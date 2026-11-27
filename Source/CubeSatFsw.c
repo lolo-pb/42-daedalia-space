@@ -51,6 +51,11 @@ void CubeSatMixDipole(struct AcType *AC, const double requestedDipole[3]){
 
 void CubeSatFsw(struct SCType *S){
     struct AcType *AC = &S->AC;
+    static PID attitudePid[3] = { // 3 PIDS for each axis /// TODO : This needs tu tuning
+        {.minimum_integral = -1.0, .maximum_integral = 1.0, .minimum_output = -1.0, .maximum_output = 1.0},
+        {.minimum_integral = -1.0, .maximum_integral = 1.0, .minimum_output = -1.0, .maximum_output = 1.0},
+        {.minimum_integral = -1.0, .maximum_integral = 1.0, .minimum_output = -1.0, .maximum_output = 1.0}
+    };
 
     // TODO : Initial values are assumed
     static double estimatedAttitude[4] = {0.0, 0.0, 0.0, 1.0}; 
@@ -82,7 +87,7 @@ void CubeSatFsw(struct SCType *S){
             }
         }
     }
-    if (MAGV(sunVector) > 0.0) { // |V| magnitude
+    if (MAGV(sunVector)) { // |V| magnitude
         UNITV(sunVector); // normalize it
         sunVectorValid = 1;
     }
@@ -96,9 +101,16 @@ void CubeSatFsw(struct SCType *S){
     QxQT(estimatedAttitude, targetAttitude, errorQuaternion);
     RECTIFYQ(errorQuaternion);
     
-    double requestedTorque[3] = {0.0, 0.0, 0.0};
-    double requestedDipole[3] = {0.0, 0.0, 0.0};
+    
+    double requestedTorque[3];
+    double requestedDipole[3];
 
+    for (int i = 0; i < 3; i++) 
+        requestedTorque[i] = PidUpdate(&attitudePid[i], -errorQuaternion[i],angularVelocity[i], AC->DT);
+        //                                             ^^^ this is negative bacuse of 42 convention - _-
+
+    
+        
     CubeSatMixDipole(AC, requestedDipole);
     return;
 }
