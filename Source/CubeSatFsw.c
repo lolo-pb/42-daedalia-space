@@ -62,8 +62,10 @@ void CubeSatFsw(struct SCType *S){
     double angularVelocity[3] = {0.0, 0.0, 0.0};
     double sunVector[3] = {0.0, 0.0, 0.0};
     int sunVectorValid = 0;
+    double magneticField[3] = {0.0, 0.0, 0.0};
 
     /* Add the gyro readings to the acumulated estimaredAttitude */
+    /// Gyro attitude estimate
     if (AC->Ngyro == 3) {
         for (int i = 0; i < 3; i++) {
             for (int j = 0; j < 3; j++) {
@@ -80,6 +82,7 @@ void CubeSatFsw(struct SCType *S){
 
     /* This reconstruction assumes the 5 sensors               */
     /* TODO : i assume solar pannels count as this, check this */
+    /// Sun vector calculation
     for (long i = 0; i < AC->Ncss; i++) {
         if (AC->CSS[i].Valid && AC->CSS[i].Scale > 0.0) {
             for (int j = 0; j < 3; j++) {
@@ -93,24 +96,43 @@ void CubeSatFsw(struct SCType *S){
     }
     // TODO : we still dont use the sun vector to correct attitude estimate
 
+    /* Three orthogonal magnetometer axes are assumed. */
+    /// Calculate magnetic field from magnetometer
+    if (AC->Nmag == 3) {
+        for (int i = 0; i < 3; i++) {
+            for (int j = 0; j < 3; j++) {
+                magneticField[j] += AC->MAG[i].Field * AC->MAG[i].Axis[j];
+            }
+        }
+    }
+
+    //////////////////////////////////////////////////////////////////////////////////////////////
+    ///////////////// This semaprates sensor readings wiht magnetorquer commands /////////////////
+    //////////////////////////////////////////////////////////////////////////////////////////////
 
     /* Placeholders for the target and controller calculations. */
     double targetAttitude[4] = {0.0, 0.0, 0.0, 1.0}; // TODO : this is a plceholder  
-    double errorQuaternion[4] = {0.0, 0.0, 0.0, 1.0};
-
-    QxQT(estimatedAttitude, targetAttitude, errorQuaternion);
-    RECTIFYQ(errorQuaternion);
-    
-    
+    double errorQuaternion[4];
     double requestedTorque[3];
     double requestedDipole[3];
 
+    QxQT(estimatedAttitude, targetAttitude, errorQuaternion);
+    RECTIFYQ(errorQuaternion);
+
+    /// Update requested torque with PIDs
     for (int i = 0; i < 3; i++) 
         requestedTorque[i] = PidUpdate(&attitudePid[i], -errorQuaternion[i],angularVelocity[i], AC->DT);
         //                                             ^^^ this is negative bacuse of 42 convention - _-
 
-    
-        
+    /* torque = dipole × magnetic field */
+    /*  =>  (BxT)/(|B|^2)               */
+    /// Target Magnetic dipole with taget torque and magnetic field 
+    double fieldSquared = VoV(magneticField, magneticField);
+    if (fieldSquared > 1.0e-18) {
+        VxV(magneticField, requestedTorque, requestedDipole);
+        for (int i = 0; i < 3; i++) requestedDipole[i] /= fieldSquared;
+    }
+
     CubeSatMixDipole(AC, requestedDipole);
     return;
 }
