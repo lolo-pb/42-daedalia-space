@@ -1,6 +1,22 @@
 #include "42.h"
 #include "CubeSatFsw.h"
 
+/* Coil order: +X, -X, +Y, -Y, +Z. */
+void CubeSatMixDipole(struct AcType *AC, const double requestedDipole[3]){
+    double commands[5] = {  /// Note that were using half the command on every MTB so ye. TODO
+         0.5 * requestedDipole[0],  // +X coil: half the X request
+        -0.5 * requestedDipole[0],  // -X coil: the other half
+         0.5 * requestedDipole[1],  // +Y coil: half the Y request
+        -0.5 * requestedDipole[1],  // -Y coil: the other half
+         requestedDipole[2]         // +Z coil: all of the Z request
+    };
+
+    for (long i = 0; i < 5; i++) {
+        double limit = AC->MTB[i].Mmax;
+        AC->MTB[i].Mcmd = Limit(commands[i], -limit, limit);
+    }
+}
+
 void CubeSatFsw(struct SCType *S){
     struct AcType *AC = &S->AC;
     const double *magneticField = AC->bvb;  /* Body frame, tesla */
@@ -19,6 +35,8 @@ void CubeSatFsw(struct SCType *S){
     double requestedTorque[3] = {0.0, 0.0, 0.0};
     double requestedDipole[3] = {0.0, 0.0, 0.0};
 
+    CubeSatMixDipole(AC, requestedDipole);
+    return;
 }
 
 /*
