@@ -24,17 +24,44 @@ void CubeSatMixDipole(struct AcType *AC, const double requestedDipole[3]){
 
 void CubeSatFsw(struct SCType *S){
     struct AcType *AC = &S->AC;
-    const double *magneticField = AC->bvb;  /* Body frame, tesla */
-    const double *angularVelocity = AC->wbn; /* Body frame, rad/s */
-    const double *attitude = AC->qbn;        /* Body relative to inertial */
-    const double *position = AC->PosN;       /* Inertial frame, m */
-    const double *velocity = AC->VelN;       /* Inertial frame, m/s */
-    const double (*inertia)[3] = AC->MOI;    /* kg m^2 */
-    long magneticFieldValid = AC->MagValid;
+
+    // TODO : Initial values are assumed
+    static double estimatedAttitude[4] = {0.0, 0.0, 0.0, 1.0}; 
+    double angularVelocity[3] = {0.0, 0.0, 0.0};
+    double sunVector[3] = {0.0, 0.0, 0.0};
+    int sunVectorValid = 0;
+
+    /* Add the gyro readings to the acumulated estimaredAttitude */
+    if (AC->Ngyro == 3) {
+        for (int i = 0; i < 3; i++) {
+            for (int j = 0; j < 3; j++) {
+                angularVelocity[j] += AC->Gyro[i].Rate * AC->Gyro[i].Axis[j];
+            }
+        }
+        double quaternionRate[4];
+        QW2QDOT(estimatedAttitude, angularVelocity, quaternionRate);
+        for (int i = 0; i < 4; i++) {
+            estimatedAttitude[i] += quaternionRate[i] * AC->DT;
+        }
+        UNITQ(estimatedAttitude); // normalize it
+    }
+
+    /* This reconstruction assumes the 5 sensors               */
+    /* TODO : i assume solar pannels count as this, check this */
+    for (long i = 0; i < AC->Ncss; i++) {
+        if (AC->CSS[i].Valid && AC->CSS[i].Scale > 0.0) {
+            for (int j = 0; j < 3; j++) {
+                sunVector[j] += AC->CSS[i].Illum / AC->CSS[i].Scale * AC->CSS[i].Axis[j];
+            }
+        }
+    }
+    if (MAGV(sunVector) > 0.0) { // |V| magnitude
+        UNITV(sunVector); // normalize it
+        sunVectorValid = 1;
+    }
 
     /* Placeholders for the target and controller calculations. */
-    double targetAttitude[4] = {0.0, 0.0, 0.0, 1.0};
-    
+    double targetAttitude[4] = {0.0, 0.0, 0.0, 1.0};    
     double errorQuaternion[4] = {0.0, 0.0, 0.0, 1.0};
     
     double requestedTorque[3] = {0.0, 0.0, 0.0};
