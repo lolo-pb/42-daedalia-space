@@ -221,7 +221,7 @@ endif
 
 42OBJ = $(OBJ)42main.o $(OBJ)42exec.o $(OBJ)42actuators.o $(OBJ)42cmd.o \
 $(OBJ)42commlink.o $(OBJ)42dynamics.o $(OBJ)42environs.o $(OBJ)42ephem.o \
-$(OBJ)42fsw.o $(OBJ)42init.o $(OBJ)42ipc.o $(OBJ)42jitter.o $(OBJ)42joints.o \
+$(OBJ)42fsw.o $(OBJ)CubeSatFsw.o $(OBJ)42init.o $(OBJ)42ipc.o $(OBJ)42jitter.o $(OBJ)42joints.o \
 $(OBJ)42optics.o $(OBJ)42perturb.o $(OBJ)42report.o $(OBJ)42sensors.o
 
 KITOBJ = $(OBJ)dcmkit.o $(OBJ)envkit.o $(OBJ)fswkit.o  $(OBJ)iokit.o \
@@ -282,6 +282,9 @@ $(OBJ)42ephem.o     : $(SRC)42ephem.c $(INC)42.h
 
 $(OBJ)42fsw.o       : $(SRC)42fsw.c $(INC)Ac.h $(INC)AcTypes.h
 	$(CC) $(CFLAGS) -c $(SRC)42fsw.c -o $(OBJ)42fsw.o
+
+$(OBJ)CubeSatFsw.o  : $(SRC)CubeSatFsw.c $(INC)CubeSatFsw.h
+	$(CC) $(CFLAGS) -c $(SRC)CubeSatFsw.c -o $(OBJ)CubeSatFsw.o
 
 $(OBJ)42gl.o        : $(SRC)42gl.c $(INC)42.h $(INC)42gl.h
 	$(CC) $(CFLAGS) -c $(SRC)42gl.c -o $(OBJ)42gl.o
