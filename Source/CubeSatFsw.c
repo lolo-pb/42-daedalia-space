@@ -59,10 +59,15 @@ void CubeSatFsw(struct SCType *S){
         UNITV(sunVector); // normalize it
         sunVectorValid = 1;
     }
+    // TODO : we still dont use the sun vector to correct attitude estimate
+
 
     /* Placeholders for the target and controller calculations. */
-    double targetAttitude[4] = {0.0, 0.0, 0.0, 1.0};    
+    double targetAttitude[4] = {0.0, 0.0, 0.0, 1.0}; // TODO : this is a plceholder  
     double errorQuaternion[4] = {0.0, 0.0, 0.0, 1.0};
+
+    QxQT(estimatedAttitude, targetAttitude, errorQuaternion);
+    RECTIFYQ(errorQuaternion);
     
     double requestedTorque[3] = {0.0, 0.0, 0.0};
     double requestedDipole[3] = {0.0, 0.0, 0.0};
