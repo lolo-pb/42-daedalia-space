@@ -84,7 +84,7 @@ void CubeSatFsw(struct SCType *S){
     /* TODO : i assume solar pannels count as this, check this */
     /// Sun vector calculation
     for (long i = 0; i < AC->Ncss; i++) {
-        if (AC->CSS[i].Valid && AC->CSS[i].Scale > 0.0) {
+        if (AC->CSS[i].Valid && AC->CSS[i].Scale) {
             for (int j = 0; j < 3; j++) {
                 sunVector[j] += AC->CSS[i].Illum / AC->CSS[i].Scale * AC->CSS[i].Axis[j];
             }
