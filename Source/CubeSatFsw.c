@@ -114,7 +114,7 @@ void CubeSatFsw(struct SCType *S){
     double targetAttitude[4] = {0.0, 0.0, 0.0, 1.0}; // TODO : this is a plceholder  
     double errorQuaternion[4];
     double requestedTorque[3];
-    double requestedDipole[3];
+    double requestedDipole[3] = {0.0, 0.0, 0.0};
 
     QxQT(estimatedAttitude, targetAttitude, errorQuaternion);
     RECTIFYQ(errorQuaternion);
