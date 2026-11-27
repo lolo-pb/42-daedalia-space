@@ -283,7 +283,7 @@ $(OBJ)42ephem.o     : $(SRC)42ephem.c $(INC)42.h
 $(OBJ)42fsw.o       : $(SRC)42fsw.c $(INC)Ac.h $(INC)AcTypes.h
 	$(CC) $(CFLAGS) -c $(SRC)42fsw.c -o $(OBJ)42fsw.o
 
-$(OBJ)CubeSatFsw.o  : $(SRC)CubeSatFsw.c $(INC)CubeSatFsw.h
+$(OBJ)CubeSatFsw.o  : $(SRC)CubeSatFsw.c $(INC)CubeSatFsw.h $(INC)42.h
 	$(CC) $(CFLAGS) -c $(SRC)CubeSatFsw.c -o $(OBJ)CubeSatFsw.o
 
 $(OBJ)42gl.o        : $(SRC)42gl.c $(INC)42.h $(INC)42gl.h

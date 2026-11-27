@@ -1,4 +1,25 @@
+#include "42.h"
 #include "CubeSatFsw.h"
+
+void CubeSatFsw(struct SCType *S){
+    struct AcType *AC = &S->AC;
+    const double *magneticField = AC->bvb;  /* Body frame, tesla */
+    const double *angularVelocity = AC->wbn; /* Body frame, rad/s */
+    const double *attitude = AC->qbn;        /* Body relative to inertial */
+    const double *position = AC->PosN;       /* Inertial frame, m */
+    const double *velocity = AC->VelN;       /* Inertial frame, m/s */
+    const double (*inertia)[3] = AC->MOI;    /* kg m^2 */
+    long magneticFieldValid = AC->MagValid;
+
+    /* Placeholders for the target and controller calculations. */
+    double targetAttitude[4] = {0.0, 0.0, 0.0, 1.0};
+    
+    double errorQuaternion[4] = {0.0, 0.0, 0.0, 1.0};
+    
+    double requestedTorque[3] = {0.0, 0.0, 0.0};
+    double requestedDipole[3] = {0.0, 0.0, 0.0};
+
+}
 
 /*
 Sensors — inputs to the controller:
@@ -66,6 +87,3 @@ Spacecraft :
     sensor_validity_flags
     control_mode
 */
-
-void CubeSatFsw(struct SCType *S){
-}
