@@ -99,7 +99,7 @@ PULSED                        ! Mode (PULSED or PROPORTIONAL)
 0                             ! Body
 0                             ! Node
 ******************************* Gyro ************************************
-0                                ! Number of Gyro Axes
+3                                ! Number of Gyro Axes
 ============================== Axis 0 ===================================
 0.1                           ! Sample Time,sec
 1.0  0.0  0.0                 ! Axis expressed in Body Frame
@@ -111,8 +111,30 @@ PULSED                        ! Mode (PULSED or PROPORTIONAL)
 0.1                           ! Angle Noise, arcsec RMS
 0.1                           ! Initial Bias (deg/hr)
 0                             ! Node
+============================== Axis 1 ===================================
+0.1                           ! Sample Time,sec
+0.0  1.0  0.0                 ! Axis expressed in Body Frame
+1000.0                        ! Max Rate, deg/sec
+100.0                         ! Scale Factor Error, ppm
+1.0                           ! Quantization, arcsec 
+0.07                          ! Angle Random Walk (deg/rt-hr)
+0.1  1.0                      ! Bias Stability (deg/hr) over timespan (hr)
+0.1                           ! Angle Noise, arcsec RMS
+0.1                           ! Initial Bias (deg/hr)
+0                             ! Node
+============================== Axis 2 ===================================
+0.1                           ! Sample Time,sec
+0.0  0.0  1.0                 ! Axis expressed in Body Frame
+1000.0                        ! Max Rate, deg/sec
+100.0                         ! Scale Factor Error, ppm
+1.0                           ! Quantization, arcsec 
+0.07                          ! Angle Random Walk (deg/rt-hr)
+0.1  1.0                      ! Bias Stability (deg/hr) over timespan (hr)
+0.1                           ! Angle Noise, arcsec RMS
+0.1                           ! Initial Bias (deg/hr)
+0                             ! Node
 *************************** Magnetometer ********************************
-0                             ! Number of Magnetometer Axes
+3                             ! Number of Magnetometer Axes
 ============================== Axis 0 ===================================
 0.1                           ! Sample Time,sec
 1.0  0.0  0.0                 ! Axis expressed in Body Frame
@@ -121,11 +143,59 @@ PULSED                        ! Mode (PULSED or PROPORTIONAL)
 1.0E-6                        ! Quantization, Tesla 
 1.0E-6                        ! Noise, Tesla RMS
 0                             ! Node
+============================== Axis 1 ===================================
+0.1                           ! Sample Time,sec
+0.0  1.0  0.0                 ! Axis expressed in Body Frame
+60.0E-6                       ! Saturation, Tesla
+0.0                           ! Scale Factor Error, ppm
+1.0E-6                        ! Quantization, Tesla 
+1.0E-6                        ! Noise, Tesla RMS
+0                             ! Node
+============================== Axis 2 ===================================
+0.1                           ! Sample Time,sec
+0.0  0.0  1.0                 ! Axis expressed in Body Frame
+60.0E-6                       ! Saturation, Tesla
+0.0                           ! Scale Factor Error, ppm
+1.0E-6                        ! Quantization, Tesla 
+1.0E-6                        ! Noise, Tesla RMS
+0                             ! Node
 *********************** Coarse Sun Sensor *******************************
-0                             ! Number of Coarse Sun Sensors
+5                             ! Number of Coarse Sun Sensors
 ============================== CSS 0 ====================================
 0.1                           ! Sample Time,sec
-1.0  1.0  1.0                 ! Axis expressed in Body Frame
+1.0  0.0  0.0                 ! Axis expressed in Body Frame
+90.0                          ! Half-cone Angle, deg
+1.0                           ! Scale Factor
+0.001                         ! Quantization
+0                             ! Body
+0                             ! Node
+============================== CSS 1 ====================================
+0.1                           ! Sample Time,sec
+-1.0  0.0  0.0                ! Axis expressed in Body Frame
+90.0                          ! Half-cone Angle, deg
+1.0                           ! Scale Factor
+0.001                         ! Quantization
+0                             ! Body
+0                             ! Node
+============================== CSS 2 ====================================
+0.1                           ! Sample Time,sec
+0.0  1.0  0.0                 ! Axis expressed in Body Frame
+90.0                          ! Half-cone Angle, deg
+1.0                           ! Scale Factor
+0.001                         ! Quantization
+0                             ! Body
+0                             ! Node
+============================== CSS 3 ====================================
+0.1                           ! Sample Time,sec
+0.0 -1.0  0.0                 ! Axis expressed in Body Frame
+90.0                          ! Half-cone Angle, deg
+1.0                           ! Scale Factor
+0.001                         ! Quantization
+0                             ! Body
+0                             ! Node
+============================== CSS 4 ====================================
+0.1                           ! Sample Time,sec
+0.0  0.0  1.0                 ! Axis expressed in Body Frame
 90.0                          ! Half-cone Angle, deg
 1.0                           ! Scale Factor
 0.001                         ! Quantization
